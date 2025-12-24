@@ -1,0 +1,174 @@
+generator client {
+  provider   = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+// ============================================
+// MULTI-TENANT: Airlines (Tenants)
+// ============================================
+model Airline {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique // e.g., "AA", "DL"
+  logo      String?  // URL to logo
+  branding  Json?    // colors, theme settings { primaryColor, secondaryColor }
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users           User[]
+  manualChapters  ManualChapter[]
+  
+  @@map("airlines")
+}
+
+// ============================================
+// ROLES: User Roles
+// ============================================
+enum Role {
+  SUPER_ADMIN  // Can manage all airlines
+  ADMIN        // Can manage their airline
+  EDITOR       // Can edit manuals
+  VIEWER       // Read-only access
+}
+
+// ============================================
+// USERS: System Users
+// ============================================
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String    // hashed with bcrypt
+  firstName         String
+  lastName          String
+  role              Role      @default(VIEWER)
+  active            Boolean   @default(true)
+  
+  // Multi-tenant: null for SUPER_ADMIN
+  airlineId         String?
+  airline           Airline?  @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  
+  // Password reset tokens
+  resetToken        String?   @unique
+  resetTokenExpiry  DateTime?
+  
+  // Refresh tokens for JWT
+  refreshTokens     RefreshToken[]
+  
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLogin         DateTime?
+
+  @@index([airlineId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================
+// REFRESH TOKENS: For JWT authentication
+// ============================================
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// MANUAL CHAPTERS: Top-level manual organization
+// ============================================
+model ManualChapter {
+  id          String    @id @default(uuid())
+  title       String
+  description String?   @db.Text
+  order       Int       // Display order
+  active      Boolean   @default(true)
+  
+  // Multi-tenant: belongs to an airline
+  airlineId   String
+  airline     Airline   @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  sections    ManualSection[]
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([airlineId, order]) // Each airline has its own ordering
+  @@index([airlineId])
+  @@map("manual_chapters")
+}
+
+// ============================================
+// MANUAL SECTIONS: Sub-sections within chapters
+// ============================================
+model ManualSection {
+  id          String        @id @default(uuid())
+  title       String
+  description String?       @db.Text
+  order       Int           // Display order within chapter
+  active      Boolean       @default(true)
+  
+  // Belongs to a chapter
+  chapterId   String
+  chapter     ManualChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  contents    ManualContent[]
+  
+  // Timestamps
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([chapterId, order]) // Each chapter has its own ordering
+  @@index([chapterId])
+  @@map("manual_sections")
+}
+
+// ============================================
+// CONTENT TYPES: Different types of content
+// ============================================
+enum ContentType {
+  TEXT   // Rich text content
+  IMAGE  // Image URL
+  VIDEO  // Video URL
+  PDF    // PDF URL
+  AUDIO  // Audio URL
+}
+
+// ============================================
+// MANUAL CONTENT: Actual content items
+// ============================================
+model ManualContent {
+  id          String        @id @default(uuid())
+  title       String
+  type        ContentType
+  content     String        @db.Text // HTML for TEXT, URL for media
+  order       Int           // Display order within section
+  active      Boolean       @default(true)
+  
+  // Belongs to a section
+  sectionId   String
+  section     ManualSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
+  // Optional metadata (file size, duration, etc.)
+  metadata    Json?
+  
+  // Timestamps
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([sectionId, order]) // Each section has its own ordering
+  @@index([sectionId])
+  @@map("manual_contents")
+}
