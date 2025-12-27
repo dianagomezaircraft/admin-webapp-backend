@@ -182,14 +182,17 @@ export class ManualService {
     });
   }
 
-  async getContentById(id: string, airlineId: string) {
+  async getContentById(id: string, airlineId: string | null) {
+    const where: any = { id };
+
+    if (airlineId) {
+      where.section = {
+        chapter: { airlineId },
+      };
+    }
+
     const content = await prisma.manualContent.findFirst({
-      where: {
-        id,
-        section: {
-          chapter: { airlineId },
-        },
-      },
+      where,
       include: {
         section: {
           include: {

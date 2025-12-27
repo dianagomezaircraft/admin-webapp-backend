@@ -2,13 +2,14 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { setupSwagger } from './config/swagger';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
-// import airlineRoutes from './routes/airline.routes';
-// import userRoutes from './routes/user.routes';
-// import chapterRoutes from './routes/chapter.routes';
-// import sectionRoutes from './routes/section.routes';
+import airlineRoutes from './routes/airlines.routes';
+import userRoutes from './routes/user.routes';
+import chapterRoutes from './routes/chapter.routes';
+import sectionRoutes from './routes/section.routes';
 import contentRoutes from './routes/content.routes';
 
 // Create Express application
@@ -40,6 +41,9 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+// Setup Swagger Documentation
+setupSwagger(app);
+
 // ============================================
 // HEALTH CHECK
 // ============================================
@@ -60,14 +64,14 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 
 // Airline management routes (SUPER_ADMIN only for create/update/delete)
-// app.use('/api/airlines', airlineRoutes);
+app.use('/api/airlines', airlineRoutes);
 
 // User management routes (Admin+ with tenant isolation)
-// app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes);
 
 // Manual content routes (Editor+ with tenant isolation)
-// app.use('/api/chapters', chapterRoutes);
-// app.use('/api/sections', sectionRoutes);
+app.use('/api/chapters', chapterRoutes);
+app.use('/api/sections', sectionRoutes);
 app.use('/api/contents', contentRoutes);
 
 // ============================================

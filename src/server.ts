@@ -13,6 +13,8 @@ const server = app.listen(PORT, () => {
   console.log(`API running on: http://localhost:${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Auth endpoint: http://localhost:${PORT}/api/auth/login`);
+  console.log(`Chapters endpoint: http://localhost:${PORT}/api/chapters/`);
+  console.log(`Contents endpoint: http://localhost:${PORT}/api/contents/`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
