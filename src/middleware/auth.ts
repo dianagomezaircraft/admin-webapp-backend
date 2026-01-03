@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt';
-import prisma from '../config/database';
+import {prisma} from '../config/database';
 import { Role } from '@prisma/client';
 
 // Extender el tipo Request para incluir el usuario

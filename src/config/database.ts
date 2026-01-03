@@ -4,11 +4,11 @@ import { Pool } from 'pg';
 
 // Create a PostgreSQL connection pool with explicit configuration
 const pool = new Pool({
-  host: 'localhost',
+  host: 'aws-1-us-east-1.pooler.supabase.com',
   port: 5432,
-  user: 'postgres',
-  password: 'admin',
-  database: 'admin_portal',
+  user: 'postgres.tllcfupbarosdeeujakl',
+  password: 'airtooradmin1',
+  database: 'postgres',
 });
 
 // Create the Prisma adapter
@@ -20,4 +20,16 @@ export const prisma = new PrismaClient({
   log: ['query', 'error', 'warn'],
 });
 
-export default prisma;
+// Function to test database connection
+async function testDatabaseConnection(): Promise<boolean> {
+  try {
+    await prisma.$connect();
+    console.log('Database connection successful');
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
+  }
+}
+
+export default testDatabaseConnection;
