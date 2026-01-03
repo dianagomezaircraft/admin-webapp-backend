@@ -1,30 +1,31 @@
 import { prisma } from '../lib/prisma';
-
+import { ContentType } from '@prisma/client';
+import { Role } from '@prisma/client';
 
 interface User {
   id: string;
   email: string;
-  role: string;
-  airlineId: string;
+  role: Role;  // Cambiado de string a Role
+  airlineId: string | null;  // Cambiado de string a string | null
 }
 
 interface CreateContentDto {
   title: string;
-  body: string;
-  contentType: string;
+  content: string;
+  type: ContentType;
   sectionId: string;
   order?: number;
   metadata?: any;
-  isActive?: boolean;
+  active?: boolean;
 }
 
 interface UpdateContentDto {
   title?: string;
-  body?: string;
-  contentType?: string;
+  content?: string;
+  type?: ContentType;
   order?: number;
   metadata?: any;
-  isActive?: boolean;
+  active?: boolean;
 }
 
 export class ContentService {
@@ -55,7 +56,7 @@ export class ContentService {
     };
 
     if (!includeInactive) {
-      whereClause.isActive = true;
+      whereClause.active = true;
     }
 
     const content = await prisma.manualContent.findMany({
@@ -120,7 +121,7 @@ export class ContentService {
   }
 
   async create(data: CreateContentDto, user: User) {
-    const { title, body, contentType, sectionId, order, metadata, isActive } = data;
+    const { title, content, type, sectionId, order, metadata, active } = data;
 
     // Validation
     if (!title || !title.trim()) {
@@ -129,14 +130,14 @@ export class ContentService {
       throw error;
     }
 
-    if (!body || !body.trim()) {
-      const error: any = new Error('Body is required');
+    if (!content || !content.trim()) {
+      const error: any = new Error('Content is required');
       error.statusCode = 400;
       throw error;
     }
 
-    if (!contentType || !contentType.trim()) {
-      const error: any = new Error('contentType is required');
+    if (!type) {
+      const error: any = new Error('Type is required');
       error.statusCode = 400;
       throw error;
     }
@@ -148,10 +149,10 @@ export class ContentService {
     }
 
     // Validate content type
-    const validContentTypes = ['TEXT', 'MARKDOWN', 'HTML', 'IMAGE', 'VIDEO', 'PDF', 'LINK'];
-    if (!validContentTypes.includes(contentType.toUpperCase())) {
+    const validContentTypes: ContentType[] = ['TEXT', 'IMAGE', 'VIDEO', 'PDF'];
+    if (!validContentTypes.includes(type)) {
       const error: any = new Error(
-        `Invalid contentType. Must be one of: ${validContentTypes.join(', ')}`
+        `Invalid type. Must be one of: ${validContentTypes.join(', ')}`
       );
       error.statusCode = 400;
       throw error;
@@ -188,15 +189,15 @@ export class ContentService {
       contentOrder = lastContent ? lastContent.order + 1 : 1;
     }
 
-    const content = await prisma.manualContent.create({
+    const newContent = await prisma.manualContent.create({
       data: {
         title: title.trim(),
-        body: body.trim(),
-        contentType: contentType.toUpperCase(),
+        content: content.trim(),
+        type: type,
         sectionId,
         order: contentOrder,
         metadata: metadata || {},
-        isActive: isActive !== undefined ? isActive : true,
+        active: active !== undefined ? active : true,
       },
       include: {
         section: {
@@ -215,11 +216,11 @@ export class ContentService {
       },
     });
 
-    return content;
+    return newContent;
   }
 
   async update(id: string, data: UpdateContentDto, user: User) {
-    const { title, body, contentType, order, metadata, isActive } = data;
+    const { title, content, type, order, metadata, active } = data;
 
     // Check if content exists
     const existingContent = await prisma.manualContent.findUnique({
@@ -258,25 +259,25 @@ export class ContentService {
       updateData.title = title.trim();
     }
 
-    if (body !== undefined) {
-      if (!body.trim()) {
-        const error: any = new Error('Body cannot be empty');
+    if (content !== undefined) {
+      if (!content.trim()) {
+        const error: any = new Error('Content cannot be empty');
         error.statusCode = 400;
         throw error;
       }
-      updateData.body = body.trim();
+      updateData.content = content.trim();
     }
 
-    if (contentType !== undefined) {
-      const validContentTypes = ['TEXT', 'MARKDOWN', 'HTML', 'IMAGE', 'VIDEO', 'PDF', 'LINK'];
-      if (!validContentTypes.includes(contentType.toUpperCase())) {
+    if (type !== undefined) {
+      const validContentTypes: ContentType[] = ['TEXT', 'IMAGE', 'VIDEO', 'PDF'];
+      if (!validContentTypes.includes(type)) {
         const error: any = new Error(
-          `Invalid contentType. Must be one of: ${validContentTypes.join(', ')}`
+          `Invalid type. Must be one of: ${validContentTypes.join(', ')}`
         );
         error.statusCode = 400;
         throw error;
       }
-      updateData.contentType = contentType.toUpperCase();
+      updateData.type = type;
     }
 
     if (order !== undefined) {
@@ -287,13 +288,13 @@ export class ContentService {
       updateData.metadata = metadata;
     }
 
-    if (isActive !== undefined) {
-      updateData.isActive = isActive;
+    if (active !== undefined) {
+      updateData.active = active;
     }
 
     updateData.updatedAt = new Date();
 
-    const content = await prisma.manualContent.update({
+    const updatedContent = await prisma.manualContent.update({
       where: { id },
       data: updateData,
       include: {
@@ -313,7 +314,7 @@ export class ContentService {
       },
     });
 
-    return content;
+    return updatedContent;
   }
 
   async delete(id: string, user: User) {
@@ -352,15 +353,15 @@ export class ContentService {
   async search(query: string, user: User, chapterId?: string) {
     // Build where clause
     const whereClause: any = {
-      isActive: true,
+      active: true,
       OR: [
         { title: { contains: query, mode: 'insensitive' } },
-        { body: { contains: query, mode: 'insensitive' } },
+        { content: { contains: query, mode: 'insensitive' } },
       ],
       section: {
-        isActive: true,
+        active: true,
         chapter: {
-          isActive: true,
+          active: true,
         },
       },
     };

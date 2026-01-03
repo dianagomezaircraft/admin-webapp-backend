@@ -1,14 +1,8 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
+import { ApiResponse } from '../utils/api-response';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    airlineId: string;
-  };
-}
+
 
 export class UserController {
   private userService: UserService;
@@ -17,149 +11,74 @@ export class UserController {
     this.userService = new UserService();
   }
 
-  /**
-   * Get all users
-   * @route GET /api/users
-   */
-  async getAll(req: AuthRequest, res: Response): Promise<void> {
+  async getAll(req: Request, res: Response) {
     try {
-      const { airlineId, includeInactive } = req.query;
-      const user = req.user;
-
-      if (!user) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+      if (!req.user) {
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
-      const users = await this.userService.getAll(
-        user,
-        airlineId as string,
-        includeInactive === 'true'
-      );
+      const airlineId = req.query.airlineId as string | undefined;
+      const includeInactive = req.query.includeInactive === 'true';
 
-      res.status(200).json({
-        success: true,
-        data: users,
-        count: users.length,
-      });
+      const users = await this.userService.getAll(req.user, airlineId, includeInactive);
+      return ApiResponse.success(res, users);
     } catch (error: any) {
-      console.error('Error fetching users:', error);
-      res.status(error.statusCode || 500).json({
-        error: error.message || 'Failed to fetch users',
-      });
+      return ApiResponse.error(res, error.message, error.statusCode || 500);
     }
   }
 
-  /**
-   * Get user by ID
-   * @route GET /api/users/:id
-   */
-  async getById(req: AuthRequest, res: Response): Promise<void> {
+  async getById(req: Request, res: Response) {
     try {
+      if (!req.user) {
+        return ApiResponse.unauthorized(res, 'Authentication required');
+      }
+
       const { id } = req.params;
-      const user = req.user;
-
-      if (!user) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const foundUser = await this.userService.getById(id, user);
-
-      res.status(200).json({
-        success: true,
-        data: foundUser,
-      });
+      const user = await this.userService.getById(id, req.user);
+      return ApiResponse.success(res, user);
     } catch (error: any) {
-      console.error('Error fetching user:', error);
-      res.status(error.statusCode || 500).json({
-        error: error.message || 'Failed to fetch user',
-      });
+      return ApiResponse.error(res, error.message, error.statusCode || 500);
     }
   }
 
-  /**
-   * Create new user
-   * @route POST /api/users
-   */
-  async create(req: AuthRequest, res: Response): Promise<void> {
+  async create(req: Request, res: Response) {
     try {
-      const user = req.user;
-
-      if (!user) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+      if (!req.user) {
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
-      const newUser = await this.userService.create(req.body, user);
-
-      res.status(201).json({
-        success: true,
-        data: newUser,
-        message: 'User created successfully',
-      });
+      const user = await this.userService.create(req.body, req.user);
+      return ApiResponse.created(res, user, 'User created successfully');
     } catch (error: any) {
-      console.error('Error creating user:', error);
-      res.status(error.statusCode || 500).json({
-        error: error.message || 'Failed to create user',
-      });
+      return ApiResponse.error(res, error.message, error.statusCode || 500);
     }
   }
 
-  /**
-   * Update user
-   * @route PUT /api/users/:id
-   */
-  async update(req: AuthRequest, res: Response): Promise<void> {
+  async update(req: Request, res: Response) {
     try {
+      if (!req.user) {
+        return ApiResponse.unauthorized(res, 'Authentication required');
+      }
+
       const { id } = req.params;
-      const user = req.user;
-
-      if (!user) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const updatedUser = await this.userService.update(id, req.body, user);
-
-      res.status(200).json({
-        success: true,
-        data: updatedUser,
-        message: 'User updated successfully',
-      });
+      const user = await this.userService.update(id, req.body, req.user);
+      return ApiResponse.success(res, user, 'User updated successfully');
     } catch (error: any) {
-      console.error('Error updating user:', error);
-      res.status(error.statusCode || 500).json({
-        error: error.message || 'Failed to update user',
-      });
+      return ApiResponse.error(res, error.message, error.statusCode || 500);
     }
   }
 
-  /**
-   * Delete user (soft delete by setting active to false)
-   * @route DELETE /api/users/:id
-   */
-  async delete(req: AuthRequest, res: Response): Promise<void> {
+  async delete(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const user = req.user;
-
-      if (!user) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+      if (!req.user) {
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
-      await this.userService.delete(id, user);
-
-      res.status(200).json({
-        success: true,
-        message: 'User deactivated successfully',
-      });
+      const { id } = req.params;
+      await this.userService.delete(id, req.user);
+      return ApiResponse.success(res, null, 'User deactivated successfully');
     } catch (error: any) {
-      console.error('Error deleting user:', error);
-      res.status(error.statusCode || 500).json({
-        error: error.message || 'Failed to delete user',
-      });
+      return ApiResponse.error(res, error.message, error.statusCode || 500);
     }
   }
 }

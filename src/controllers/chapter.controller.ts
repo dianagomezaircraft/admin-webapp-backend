@@ -3,21 +3,13 @@ import {prisma} from '../lib/prisma';
 
 
 // Extended Request type with user property
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    airlineId: string;
-  };
-}
 
 export class ChapterController {
   /**
    * Get all chapters for an airline
    * @route GET /api/chapters
    */
-  async getAll(req: AuthRequest, res: Response): Promise<void> {
+  async getAll(req: Request, res: Response): Promise<void> {
     try {
       const { airlineId, includeInactive } = req.query;
       const user = req.user;
@@ -28,7 +20,7 @@ export class ChapterController {
       }
 
       // Determine which airline to query
-      let targetAirlineId: string;
+      let targetAirlineId: string | null;
 
       if (user.role === 'SUPER_ADMIN' && airlineId) {
         targetAirlineId = airlineId as string;
@@ -85,7 +77,7 @@ export class ChapterController {
    * Get chapter by ID
    * @route GET /api/chapters/:id
    */
-  async getById(req: AuthRequest, res: Response): Promise<void> {
+  async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = req.user;
@@ -147,7 +139,7 @@ export class ChapterController {
    * Create new chapter
    * @route POST /api/chapters
    */
-  async create(req: AuthRequest, res: Response): Promise<void> {
+  async create(req: Request, res: Response): Promise<void> {
     try {
       const user = req.user;
 
@@ -165,12 +157,17 @@ export class ChapterController {
       }
 
       // Determine airline ID
-      let targetAirlineId: string;
+      let targetAirlineId: string | null;
 
       if (user.role === 'SUPER_ADMIN' && airlineId) {
         targetAirlineId = airlineId;
       } else {
         targetAirlineId = user.airlineId;
+      }
+
+      if (!targetAirlineId) {
+        res.status(400).json({ error: 'Airline ID is required' });
+        return;
       }
 
       // Verify airline exists
@@ -230,7 +227,7 @@ export class ChapterController {
    * Update chapter
    * @route PUT /api/chapters/:id
    */
-  async update(req: AuthRequest, res: Response): Promise<void> {
+  async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = req.user;
@@ -320,7 +317,7 @@ export class ChapterController {
    * Delete chapter
    * @route DELETE /api/chapters/:id
    */
-  async delete(req: AuthRequest, res: Response): Promise<void> {
+  async delete(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = req.user;

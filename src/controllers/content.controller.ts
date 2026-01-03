@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
 import { ManualService } from '../services/manual.service';
 import { ApiResponse } from '../utils/api-response';
 import { ContentType, Role } from '@prisma/client';
@@ -7,7 +6,7 @@ import { ContentType, Role } from '@prisma/client';
 const manualService = new ManualService();
 
 export class ContentController {
-  async getAll(req: AuthRequest, res: Response) {
+  async getAll(req: Request, res: Response) {
     try {
       const { sectionId } = req.params;
       const includeInactive = req.query.includeInactive === 'true';
@@ -28,7 +27,7 @@ export class ContentController {
     }
   }
 
-  async getById(req: AuthRequest, res: Response) {
+  async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const airlineId = req.user?.airlineId;
@@ -44,7 +43,7 @@ export class ContentController {
     }
   }
 
-  async create(req: AuthRequest, res: Response) {
+  async create(req: Request, res: Response) {
     try {
       const { sectionId } = req.params;
       const { title, type, content, order, metadata } = req.body;
@@ -83,7 +82,7 @@ export class ContentController {
     }
   }
 
-  async update(req: AuthRequest, res: Response) {
+  async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const { title, type, content, order, metadata, active } = req.body;
@@ -116,7 +115,7 @@ export class ContentController {
     }
   }
 
-  async delete(req: AuthRequest, res: Response) {
+  async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const airlineId = req.user?.airlineId;

@@ -1,11 +1,12 @@
 import { prisma } from '../lib/prisma';
+import { Role } from '@prisma/client';
 
 
 interface User {
   id: string;
   email: string;
-  role: string;
-  airlineId: string;
+  role: Role;  // Cambiado de string a Role
+  airlineId: string | null;  // Cambiado de string a string | null
 }
 
 interface CreateSectionDto {

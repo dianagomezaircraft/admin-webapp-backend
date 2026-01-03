@@ -1,14 +1,7 @@
 import { Request, Response } from 'express';
 import { SectionService } from '../services/section.service';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    airlineId: string;
-  };
-}
+
 
 export class SectionController {
   private sectionService: SectionService;
@@ -21,7 +14,7 @@ export class SectionController {
    * Get all sections for a chapter
    * @route GET /api/sections
    */
-  async getAll(req: AuthRequest, res: Response): Promise<void> {
+  async getAll(req: Request, res: Response): Promise<void> {
     try {
       const { chapterId, includeInactive } = req.query;
       const user = req.user;
@@ -59,7 +52,7 @@ export class SectionController {
    * Get section by ID
    * @route GET /api/sections/:id
    */
-  async getById(req: AuthRequest, res: Response): Promise<void> {
+  async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = req.user;
@@ -87,7 +80,7 @@ export class SectionController {
    * Create new section
    * @route POST /api/sections
    */
-  async create(req: AuthRequest, res: Response): Promise<void> {
+  async create(req: Request, res: Response): Promise<void> {
     try {
       const user = req.user;
 
@@ -115,7 +108,7 @@ export class SectionController {
    * Update section
    * @route PUT /api/sections/:id
    */
-  async update(req: AuthRequest, res: Response): Promise<void> {
+  async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = req.user;
@@ -144,7 +137,7 @@ export class SectionController {
    * Delete section
    * @route DELETE /api/sections/:id
    */
-  async delete(req: AuthRequest, res: Response): Promise<void> {
+  async delete(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const user = req.user;

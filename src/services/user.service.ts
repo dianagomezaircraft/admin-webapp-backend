@@ -1,12 +1,13 @@
 import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
+import { Role } from '@prisma/client';
 
 
 interface User {
   id: string;
   email: string;
-  role: string;
-  airlineId: string;
+  role: Role;  // Cambiado de string a Role
+  airlineId: string | null;  // Cambiado de string a string | null
 }
 
 interface CreateUserDto {
@@ -237,7 +238,7 @@ export class UserService {
         password: hashedPassword,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        role,
+        role: role as Role,
         airlineId: targetAirlineId,
         active: active !== undefined ? active : true,
       },
@@ -380,7 +381,8 @@ export class UserService {
         throw error;
       }
 
-      updateData.role = role;
+      updateData.role = role as Role;
+
     }
 
     if (airlineId !== undefined) {
