@@ -12,7 +12,7 @@ router.use(authenticate);
 
 /**
  * @openapi
- * /api/chapters/{chapterId}/sections:
+ * /api/sections:
  *   get:
  *     summary: Get all sections for a chapter
  *     tags:
@@ -20,7 +20,7 @@ router.use(authenticate);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
+ *       - in: query
  *         name: chapterId
  *         required: true
  *         schema:
@@ -38,36 +38,44 @@ router.use(authenticate);
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   title:
- *                     type: string
- *                   content:
- *                     type: string
- *                   order:
- *                     type: number
- *                   chapterId:
- *                     type: string
- *                   isActive:
- *                     type: boolean
- *                   createdAt:
- *                     type: string
- *                     format: date-time
- *                   updatedAt:
- *                     type: string
- *                     format: date-time
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                         nullable: true
+ *                       order:
+ *                         type: integer
+ *                       active:
+ *                         type: boolean
+ *                       chapterId:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                 count:
+ *                   type: integer
+ *       400:
+ *         description: Bad request - chapterId is required
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
  *         description: Forbidden - Insufficient permissions (requires Editor role or higher)
- *       404:
- *         description: Chapter not found
  */
-router.get('/chapters/:chapterId/sections', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/', requireEditor, enforceTenantIsolation, (req, res) =>
   sectionController.getAll(req, res)
 );
 
@@ -95,24 +103,30 @@ router.get('/chapters/:chapterId/sections', requireEditor, enforceTenantIsolatio
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: string
- *                 title:
- *                   type: string
- *                 content:
- *                   type: string
- *                 order:
- *                   type: number
- *                 chapterId:
- *                   type: string
- *                 isActive:
+ *                 success:
  *                   type: boolean
- *                 createdAt:
- *                   type: string
- *                   format: date-time
- *                 updatedAt:
- *                   type: string
- *                   format: date-time
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                     order:
+ *                       type: integer
+ *                     active:
+ *                       type: boolean
+ *                     chapterId:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
@@ -126,20 +140,13 @@ router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
 
 /**
  * @openapi
- * /api/chapters/{chapterId}/sections:
+ * /api/sections:
  *   post:
  *     summary: Create new section
  *     tags:
  *       - Sections
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: chapterId
- *         required: true
- *         schema:
- *           type: string
- *         description: Chapter ID
  *     requestBody:
  *       required: true
  *       content:
@@ -148,19 +155,23 @@ router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
  *             type: object
  *             required:
  *               - title
- *               - content
+ *               - order
+ *               - chapterId
  *             properties:
  *               title:
  *                 type: string
  *                 description: Section title
- *               content:
+ *               description:
  *                 type: string
- *                 description: Section content
+ *                 nullable: true
+ *                 description: Section description
  *               order:
- *                 type: number
- *                 description: Display order of the section
- *                 default: 1
- *               isActive:
+ *                 type: integer
+ *                 description: Display order of the section (must be unique per chapter)
+ *               chapterId:
+ *                 type: string
+ *                 description: Chapter ID this section belongs to
+ *               active:
  *                 type: boolean
  *                 default: true
  *                 description: Whether the section is active
@@ -172,34 +183,40 @@ router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: string
- *                 title:
- *                   type: string
- *                 content:
- *                   type: string
- *                 order:
- *                   type: number
- *                 chapterId:
- *                   type: string
- *                 isActive:
+ *                 success:
  *                   type: boolean
- *                 createdAt:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                     order:
+ *                       type: integer
+ *                     active:
+ *                       type: boolean
+ *                     chapterId:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 message:
  *                   type: string
- *                   format: date-time
- *                 updatedAt:
- *                   type: string
- *                   format: date-time
  *       400:
- *         description: Bad request - Invalid input data
+ *         description: Bad request - Invalid input data or duplicate order number
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
  *         description: Forbidden - Insufficient permissions (requires Editor role or higher)
- *       404:
- *         description: Chapter not found
  */
-router.post('/chapters/:chapterId/sections', requireEditor, enforceTenantIsolation, (req, res) =>
+router.post('/', requireEditor, enforceTenantIsolation, (req, res) =>
   sectionController.create(req, res)
 );
 
@@ -229,13 +246,14 @@ router.post('/chapters/:chapterId/sections', requireEditor, enforceTenantIsolati
  *               title:
  *                 type: string
  *                 description: Section title
- *               content:
+ *               description:
  *                 type: string
- *                 description: Section content
+ *                 nullable: true
+ *                 description: Section description
  *               order:
- *                 type: number
- *                 description: Display order of the section
- *               isActive:
+ *                 type: integer
+ *                 description: Display order of the section (must be unique per chapter)
+ *               active:
  *                 type: boolean
  *                 description: Whether the section is active
  *     responses:
@@ -246,26 +264,34 @@ router.post('/chapters/:chapterId/sections', requireEditor, enforceTenantIsolati
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: string
- *                 title:
- *                   type: string
- *                 content:
- *                   type: string
- *                 order:
- *                   type: number
- *                 chapterId:
- *                   type: string
- *                 isActive:
+ *                 success:
  *                   type: boolean
- *                 createdAt:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                     order:
+ *                       type: integer
+ *                     active:
+ *                       type: boolean
+ *                     chapterId:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 message:
  *                   type: string
- *                   format: date-time
- *                 updatedAt:
- *                   type: string
- *                   format: date-time
  *       400:
- *         description: Bad request - Invalid input data
+ *         description: Bad request - Invalid input data or duplicate order number
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
@@ -301,6 +327,8 @@ router.put('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
  *                 message:
  *                   type: string
  *                   example: Section deleted successfully
