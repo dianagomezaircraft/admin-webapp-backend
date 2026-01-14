@@ -18,7 +18,6 @@ export class ContentController {
 
       const contents = await manualService.getAllContents(
         sectionId,
-        airlineId!,
         includeInactive
       );
       return ApiResponse.success(res, contents);

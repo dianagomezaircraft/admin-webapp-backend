@@ -11,11 +11,11 @@ const contentController = new ContentController();
 router.use(authenticate);
 
 /**
- * @route   GET /api/sections/:sectionId/contents
+ * @route   GET /api/contents/sections/:sectionId/
  * @desc    Get all contents for a section
  * @access  Private (Editor+)
  */
-router.get('/sections/:sectionId/contents', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/sections/:sectionId', requireEditor, enforceTenantIsolation, (req, res) =>
   contentController.getAll(req, res)
 );
 
@@ -29,7 +29,7 @@ router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
 );
 
 /**
- * @route   POST /api/sections/:sectionId/contents
+ * @route   POST /api/contents/sections/:sectionId/contents
  * @desc    Create new content
  * @access  Private (Editor+)
  */

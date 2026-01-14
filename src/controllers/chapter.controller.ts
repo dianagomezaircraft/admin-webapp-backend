@@ -20,18 +20,21 @@ export class ChapterController {
       }
 
       // Determine which airline to query
-      let targetAirlineId: string | null;
+      let targetAirlineId: string | null = null;
 
       if (user.role === 'SUPER_ADMIN' && airlineId) {
         targetAirlineId = airlineId as string;
-      } else {
+      } else if (user.airlineId) {
         targetAirlineId = user.airlineId;
       }
 
       // Build where clause
-      const whereClause: any = {
-        airlineId: targetAirlineId,
-      };
+      const whereClause: any = {};
+
+      // Only filter by airlineId if we have one
+      if (targetAirlineId) {
+        whereClause.airlineId = targetAirlineId;
+      }
 
       // Filter by active status unless includeInactive is true
       if (includeInactive !== 'true') {
@@ -72,7 +75,6 @@ export class ChapterController {
       });
     }
   }
-
   /**
    * Get chapter by ID
    * @route GET /api/chapters/:id

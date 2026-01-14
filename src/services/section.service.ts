@@ -14,14 +14,14 @@ interface CreateSectionDto {
   description?: string;
   chapterId: string;
   order?: number;
-  isActive?: boolean;
+  active?: boolean;
 }
 
 interface UpdateSectionDto {
   title?: string;
   description?: string;
   order?: number;
-  isActive?: boolean;
+  active?: boolean;
 }
 
 export class SectionService {
@@ -49,7 +49,7 @@ export class SectionService {
     };
 
     if (!includeInactive) {
-      whereClause.isActive = true;
+      whereClause.active = true;
     }
 
     const sections = await prisma.manualSection.findMany({
@@ -111,7 +111,7 @@ export class SectionService {
   }
 
   async create(data: CreateSectionDto, user: User) {
-    const { title, description, chapterId, order, isActive } = data;
+    const { title, description, chapterId, order, active } = data;
 
     // Validation
     if (!title || !title.trim()) {
@@ -160,7 +160,7 @@ export class SectionService {
         description: description?.trim(),
         chapterId,
         order: sectionOrder,
-        active: isActive !== undefined ? isActive : true,
+        active: active !== undefined ? active : true,
       },
       include: {
         chapter: {
@@ -177,7 +177,7 @@ export class SectionService {
   }
 
   async update(id: string, data: UpdateSectionDto, user: User) {
-    const { title, description, order, isActive } = data;
+    const { title, description, order, active } = data;
 
     // Check if section exists
     const existingSection = await prisma.manualSection.findUnique({
@@ -220,8 +220,8 @@ export class SectionService {
       updateData.order = order;
     }
 
-    if (isActive !== undefined) {
-      updateData.isActive = isActive;
+    if (active !== undefined) {
+      updateData.active = active;
     }
 
     updateData.updatedAt = new Date();

@@ -103,27 +103,52 @@ export class ManualService {
     });
   }
 
-  async getSectionById(id: string, airlineId: string) {
-    const section = await prisma.manualSection.findFirst({
-      where: {
-        id,
-        chapter: { airlineId },
-      },
-      include: {
-        chapter: true,
-        contents: {
-          where: { active: true },
-          orderBy: { order: 'asc' },
+  async getSectionById(id: string) {
+  const section = await prisma.manualSection.findFirst({
+    where: {
+      id: id,
+    },
+    include: {
+      chapter: true,
+      contents: {
+        where: {
+          active: true
         },
-      },
-    });
-
-    if (!section) {
-      throw new Error('Section not found');
+        orderBy: {
+          order: "asc"
+        }
+      }
     }
+  });
 
-    return section;
+  if (!section) {
+    throw new Error('Section not found');
   }
+
+  return section;
+}
+  
+  // async getSectionById(id: string, airlineId: string) {
+  //   const section = await prisma.manualSection.findFirst({
+  //     where: {
+  //       id,
+  //       chapter: { airlineId },
+  //     },
+  //     include: {
+  //       chapter: true,
+  //       contents: {
+  //         where: { active: true },
+  //         orderBy: { order: 'asc' },
+  //       },
+  //     },
+  //   });
+
+  //   if (!section) {
+  //     throw new Error('Section not found');
+  //   }
+
+  //   return section;
+  // }
 
   async createSection(chapterId: string, airlineId: string, data: {
     title: string;
@@ -149,7 +174,7 @@ export class ManualService {
     order?: number;
     active?: boolean;
   }) {
-    await this.getSectionById(id, airlineId);
+    await this.getSectionById(id);
 
     return prisma.manualSection.update({
       where: { id },
@@ -158,7 +183,7 @@ export class ManualService {
   }
 
   async deleteSection(id: string, airlineId: string) {
-    await this.getSectionById(id, airlineId);
+    await this.getSectionById(id);
 
     return prisma.manualSection.delete({
       where: { id },
@@ -169,9 +194,9 @@ export class ManualService {
   // CONTENTS
   // ============================================
 
-  async getAllContents(sectionId: string, airlineId: string, includeInactive = false) {
+  async getAllContents(sectionId: string, includeInactive = false) {
     // Verify section belongs to airline
-    await this.getSectionById(sectionId, airlineId);
+    await this.getSectionById(sectionId);
 
     return prisma.manualContent.findMany({
       where: {
@@ -217,7 +242,7 @@ export class ManualService {
     metadata?: any;
   }) {
     // Verify section belongs to airline
-    await this.getSectionById(sectionId, airlineId);
+    await this.getSectionById(sectionId);
 
     return prisma.manualContent.create({
       data: {
