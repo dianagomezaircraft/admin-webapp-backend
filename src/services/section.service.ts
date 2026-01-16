@@ -1,12 +1,11 @@
 import { prisma } from '../lib/prisma';
 import { Role } from '@prisma/client';
 
-
 interface User {
   id: string;
   email: string;
-  role: Role;  // Cambiado de string a Role
-  airlineId: string | null;  // Cambiado de string a string | null
+  role: Role;
+  airlineId: string | null;
 }
 
 interface CreateSectionDto {
@@ -62,11 +61,6 @@ export class SectionService {
             airlineId: true,
           },
         },
-        // _count: {
-        //   select: {
-        //     content: true,
-        //   },
-        // },
       },
       orderBy: {
         order: 'asc',
@@ -87,10 +81,6 @@ export class SectionService {
             airlineId: true,
           },
         },
-        // content: {
-        //   where: { isActive: true },
-        //   orderBy: { order: 'asc' },
-        // },
       },
     });
 
@@ -226,6 +216,7 @@ export class SectionService {
 
     updateData.updatedAt = new Date();
 
+    // FIXED: Removed the problematic _count: {} field
     const section = await prisma.manualSection.update({
       where: { id },
       data: updateData,
@@ -236,11 +227,6 @@ export class SectionService {
             title: true,
             airlineId: true,
           },
-        },
-        _count: {
-          // select: {
-          //   content: true,
-          // },
         },
       },
     });
@@ -254,11 +240,6 @@ export class SectionService {
       where: { id },
       include: {
         chapter: true,
-        _count: {
-          // select: {
-          //   content: true,
-          // },
-        },
       },
     });
 
@@ -275,12 +256,19 @@ export class SectionService {
       throw error;
     }
 
-    // Check if section has content
-    // if (existingSection._count > 0) {
-    //   const error: any = new Error('Cannot delete section with existing content');
-    //   error.statusCode = 400;
-    //   throw error;
-    // }
+    // Optional: Check if section has content before deleting
+    // Uncomment if you want to prevent deletion of sections with content
+    /*
+    const contentCount = await prisma.manualContent.count({
+      where: { sectionId: id },
+    });
+
+    if (contentCount > 0) {
+      const error: any = new Error('Cannot delete section with existing content');
+      error.statusCode = 400;
+      throw error;
+    }
+    */
 
     await prisma.manualSection.delete({
       where: { id },
