@@ -11,7 +11,8 @@ import userRoutes from './routes/user.routes';
 import chapterRoutes from './routes/chapter.routes';
 import sectionRoutes from './routes/section.routes';
 import contentRoutes from './routes/content.routes';
-
+import contactRoutes from './routes/contact.routes';
+import searchRoutes from './routes/search.routes';
 // Create Express application
 const app = express();
 
@@ -75,6 +76,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/chapters', chapterRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/contents', contentRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/search', searchRoutes);
 
 // ============================================
 // 404 HANDLER

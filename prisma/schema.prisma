@@ -21,6 +21,7 @@ model Airline {
   // Relations
   users           User[]
   manualChapters  ManualChapter[]
+  contactGroups  ContactGroup[]
   
   @@map("airlines")
 }
@@ -171,4 +172,61 @@ model ManualContent {
   @@unique([sectionId, order]) // Each section has its own ordering
   @@index([sectionId])
   @@map("manual_contents")
+}
+
+// ============================================
+// CONTACT GROUPS: Organization groups for contacts
+// ============================================
+model ContactGroup {
+  id          String    @id @default(uuid())
+  name        String    // e.g., "Producing Broker Representatives", "London Broker Representatives"
+  description String?   @db.Text
+  order       Int       @default(0) @map("order") // Display order
+  active      Boolean   @default(true)
+  
+  // Multi-tenant: belongs to an airline
+  airlineId   String    @map("airline_id")
+  airline     Airline   @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  contacts    Contact[]
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([airlineId])
+  @@map("contact_groups")
+}
+
+// ============================================
+// CONTACTS: Individual contacts within groups
+// ============================================
+model Contact {
+  id          String       @id @default(uuid())
+  firstName   String       @map("first_name")
+  lastName    String       @map("last_name")
+  title       String?      // e.g., "Executive Director", "Divisional Director"
+  company     String?      // e.g., "Aerospace Risk Transfer Solutions (ARTS)"
+  phone       String?      // e.g., "+1 (305) 812-0800"
+  email       String?
+  timezone    String?      // e.g., "UTC (-5)"
+  avatar      String?      // URL to avatar image
+  order       Int          @default(0) // Display order within group
+  active      Boolean      @default(true)
+  
+  // Belongs to a contact group
+  groupId     String       @map("group_id")
+  group       ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  // Optional metadata
+  metadata    Json?        // Additional data like alternate phones, addresses, etc.
+  
+  // Timestamps
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([groupId])
+  @@index([lastName, firstName])
+  @@map("contacts")
 }
