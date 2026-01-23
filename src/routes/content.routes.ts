@@ -15,7 +15,7 @@ router.use(authenticate);
  * @desc    Get all contents for a section
  * @access  Private (Editor+)
  */
-router.get('/sections/:sectionId', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/sections/:sectionId', (req, res) =>
   contentController.getAll(req, res)
 );
 
@@ -24,7 +24,7 @@ router.get('/sections/:sectionId', requireEditor, enforceTenantIsolation, (req, 
  * @desc    Get content by ID
  * @access  Private (Editor+)
  */
-router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/:id',  (req, res) =>
   contentController.getById(req, res)
 );
 

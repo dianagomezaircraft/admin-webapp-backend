@@ -61,7 +61,7 @@ router.use(authenticate);
  *       403:
  *         description: Forbidden - Insufficient permissions (requires Editor role or higher)
  */
-router.get('/', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/',  (req, res) =>
   chapterController.getAll(req, res)
 );
 
@@ -110,7 +110,7 @@ router.get('/', requireEditor, enforceTenantIsolation, (req, res) =>
  *       404:
  *         description: Chapter not found
  */
-router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/:id', (req, res) =>
   chapterController.getById(req, res)
 );
 

@@ -20,7 +20,7 @@ router.use(authenticate);
  * @desc    Get all contact groups for the user's airline
  * @access  Private (Editor+)
  */
-router.get('/groups', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/groups',  (req, res) =>
   contactController.getAllGroups(req, res)
 );
 
@@ -29,7 +29,7 @@ router.get('/groups', requireEditor, enforceTenantIsolation, (req, res) =>
  * @desc    Get contact group by ID
  * @access  Private (Editor+)
  */
-router.get('/groups/:id', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/groups/:id', (req, res) =>
   contactController.getGroupById(req, res)
 );
 
@@ -69,7 +69,7 @@ router.delete('/groups/:id', requireEditor, enforceTenantIsolation, (req, res) =
  * @desc    Get all contacts for a group
  * @access  Private (Editor+)
  */
-router.get('/groups/:groupId/contacts', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/groups/:groupId/contacts', (req, res) =>
   contactController.getAllContacts(req, res)
 );
 
@@ -78,7 +78,7 @@ router.get('/groups/:groupId/contacts', requireEditor, enforceTenantIsolation, (
  * @desc    Get contact by ID
  * @access  Private (Editor+)
  */
-router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/:id',  (req, res) =>
   contactController.getContactById(req, res)
 );
 
@@ -110,9 +110,3 @@ router.delete('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
 );
 
 export default router;
-
-// ============================================
-// Add to your main app.ts or index.ts:
-// import contactRoutes from './routes/contact.routes';
-// app.use('/api/contacts', contactRoutes);
-// ============================================

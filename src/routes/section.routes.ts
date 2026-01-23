@@ -75,7 +75,7 @@ router.use(authenticate);
  *       403:
  *         description: Forbidden - Insufficient permissions (requires Editor role or higher)
  */
-router.get('/', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/', (req, res) =>
   sectionController.getAll(req, res)
 );
 
@@ -134,7 +134,7 @@ router.get('/', requireEditor, enforceTenantIsolation, (req, res) =>
  *       404:
  *         description: Section not found
  */
-router.get('/:id', requireEditor, enforceTenantIsolation, (req, res) =>
+router.get('/:id', (req, res) =>
   sectionController.getById(req, res)
 );
 
