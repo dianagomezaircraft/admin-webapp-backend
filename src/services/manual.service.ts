@@ -2,6 +2,13 @@ import { prisma } from '../lib/prisma';
 import { ContentType } from '@prisma/client';
 
 export class ManualService {
+  // Helper para reemplazar variables dinámicas
+  private processContentVariables(content: string, variables: Record<string, any>): string {
+    return content.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return variables[key] !== undefined ? variables[key] : match;
+    });
+  }
+
   // ============================================
   // CHAPTERS
   // ============================================
@@ -86,7 +93,6 @@ export class ManualService {
   // ============================================
 
   async getAllSections(chapterId: string, airlineId: string, includeInactive = false) {
-    // Verify chapter belongs to airline
     const chapter = await this.getChapterById(chapterId, airlineId);
 
     return prisma.manualSection.findMany({
@@ -104,58 +110,35 @@ export class ManualService {
   }
 
   async getSectionById(id: string) {
-  const section = await prisma.manualSection.findFirst({
-    where: {
-      id: id,
-    },
-    include: {
-      chapter: true,
-      contents: {
-        where: {
-          active: true
-        },
-        orderBy: {
-          order: "asc"
+    const section = await prisma.manualSection.findFirst({
+      where: {
+        id: id,
+      },
+      include: {
+        chapter: true,
+        contents: {
+          where: {
+            active: true
+          },
+          orderBy: {
+            order: "asc"
+          }
         }
       }
+    });
+
+    if (!section) {
+      throw new Error('Section not found');
     }
-  });
 
-  if (!section) {
-    throw new Error('Section not found');
+    return section;
   }
-
-  return section;
-}
-  
-  // async getSectionById(id: string, airlineId: string) {
-  //   const section = await prisma.manualSection.findFirst({
-  //     where: {
-  //       id,
-  //       chapter: { airlineId },
-  //     },
-  //     include: {
-  //       chapter: true,
-  //       contents: {
-  //         where: { active: true },
-  //         orderBy: { order: 'asc' },
-  //       },
-  //     },
-  //   });
-
-  //   if (!section) {
-  //     throw new Error('Section not found');
-  //   }
-
-  //   return section;
-  // }
 
   async createSection(chapterId: string, airlineId: string, data: {
     title: string;
     description?: string;
     order: number;
   }) {
-    // Verify chapter belongs to airline
     await this.getChapterById(chapterId, airlineId);
 
     return prisma.manualSection.create({
@@ -194,19 +177,51 @@ export class ManualService {
   // CONTENTS
   // ============================================
 
-  async getAllContents(sectionId: string, includeInactive = false) {
-    // Verify section belongs to airline
-    await this.getSectionById(sectionId);
+ // MODIFICADO: Ahora procesa las variables dinámicas para todos los contents
+async getAllContents(sectionId: string, includeInactive = false) {
+  const section = await this.getSectionById(sectionId);
 
-    return prisma.manualContent.findMany({
-      where: {
-        sectionId,
-        ...(includeInactive ? {} : { active: true }),
+  const contents = await prisma.manualContent.findMany({
+    where: {
+      sectionId,
+      ...(includeInactive ? {} : { active: true }),
+    },
+    include: {
+      section: {
+        include: {
+          chapter: {
+            include: {
+              airline: true, // IMPORTANTE: Incluir datos de la aerolínea
+            },
+          },
+        },
       },
-      orderBy: { order: 'asc' },
-    });
+    },
+    orderBy: { order: 'asc' },
+  });
+
+  // Procesar variables dinámicas si hay una aerolínea asociada
+  if (contents.length > 0 && contents[0].section.chapter.airline) {
+    const airline = contents[0].section.chapter.airline;
+    
+    const variables = {
+      name: airline.name,
+      code: airline.code,
+      // Puedes agregar más variables aquí según tu modelo de airline
+    };
+
+    // Procesar cada contenido con las variables
+    return contents.map(content => ({
+      ...content,
+      content: this.processContentVariables(content.content, variables),
+      // Opcional: agregar info de la aerolínea (solo en el primer item para no repetir)
+    }));
   }
 
+  return contents;
+}
+
+  // MODIFICADO: Ahora procesa las variables dinámicas
   async getContentById(id: string, airlineId: string | null) {
     const where: any = { id };
 
@@ -221,7 +236,11 @@ export class ManualService {
       include: {
         section: {
           include: {
-            chapter: true,
+            chapter: {
+              include: {
+                airline: true, // IMPORTANTE: Incluir datos de la aerolínea
+              },
+            },
           },
         },
       },
@@ -229,6 +248,31 @@ export class ManualService {
 
     if (!content) {
       throw new Error('Content not found');
+    }
+
+    // Procesar variables dinámicas si hay una aerolínea asociada
+    if (content.section.chapter.airline) {
+      const airline = content.section.chapter.airline;
+      
+      const variables = {
+        name: airline.name,
+        code: airline.code,
+        // Puedes agregar más variables aquí según tu modelo de airline
+      };
+
+      // Procesar el contenido con las variables
+      const processedContent = this.processContentVariables(content.content, variables);
+
+      return {
+        ...content,
+        content: processedContent,
+        // Opcional: agregar info de la aerolínea
+        airlineInfo: {
+          id: airline.id,
+          name: airline.name,
+          code: airline.code,
+        },
+      };
     }
 
     return content;
@@ -241,7 +285,6 @@ export class ManualService {
     order: number;
     metadata?: any;
   }) {
-    // Verify section belongs to airline
     await this.getSectionById(sectionId);
 
     return prisma.manualContent.create({
