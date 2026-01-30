@@ -75,6 +75,7 @@ export class ChapterController {
       });
     }
   }
+  
   /**
    * Get chapter by ID
    * @route GET /api/chapters/:id
@@ -102,13 +103,6 @@ export class ChapterController {
           sections: {
             where: { active: true },
             orderBy: { order: 'asc' },
-            // include: {
-            //   _count: {
-            //     select: {
-            //       content: true,
-            //     },
-            //   },
-            // },
           },
         },
       });
@@ -118,7 +112,7 @@ export class ChapterController {
         return;
       }
 
-      // Verify tenant isolation (already handled by middleware, but double-check)
+      // Verify tenant isolation
       if (user.role !== 'SUPER_ADMIN' && chapter.airlineId !== user.airlineId) {
         res.status(403).json({ error: 'Access denied to this chapter' });
         return;
@@ -150,7 +144,7 @@ export class ChapterController {
         return;
       }
 
-      const { title, description, order, active, airlineId } = req.body;
+      const { title, description, order, active, airlineId, imageUrl } = req.body; // ✅ Added imageUrl
 
       // Validation
       if (!title || !title.trim()) {
@@ -199,6 +193,7 @@ export class ChapterController {
           order: chapterOrder,
           active: active !== undefined ? active : true,
           airlineId: targetAirlineId,
+          imageUrl: imageUrl || null, // ✅ Added imageUrl
         },
         include: {
           airline: {
@@ -239,7 +234,7 @@ export class ChapterController {
         return;
       }
 
-      const { title, description, order, active } = req.body;
+      const { title, description, order, active, imageUrl } = req.body; // ✅ Added imageUrl
 
       // Check if chapter exists
       const existingChapter = await prisma.manualChapter.findUnique({
@@ -278,6 +273,11 @@ export class ChapterController {
 
       if (active !== undefined) {
         updateData.active = active;
+      }
+
+      // ✅ Handle imageUrl update
+      if (imageUrl !== undefined) {
+        updateData.imageUrl = imageUrl || null;
       }
 
       updateData.updatedAt = new Date();
@@ -360,6 +360,12 @@ export class ChapterController {
         });
         return;
       }
+
+      // ✅ Optional: Delete associated image from Supabase before deleting chapter
+      // You could add this logic here if you want automatic cleanup
+      // if (existingChapter.imageUrl) {
+      //   // Call your storage service to delete the image
+      // }
 
       await prisma.manualChapter.delete({
         where: { id },

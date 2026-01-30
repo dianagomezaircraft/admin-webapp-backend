@@ -88,25 +88,21 @@ model RefreshToken {
 // MANUAL CHAPTERS: Top-level manual organization
 // ============================================
 model ManualChapter {
-  id          String    @id @default(uuid())
+  id          String   @id @default(cuid())
   title       String
-  description String?   @db.Text
-  order       Int       // Display order
-  active      Boolean   @default(true)
-  
-  // Multi-tenant: belongs to an airline
+  description String?
+  order       Int
+  active      Boolean  @default(true)
   airlineId   String
-  airline     Airline   @relation(fields: [airlineId], references: [id], onDelete: Cascade)
-  
-  // Relations
-  sections    ManualSection[]
-  
-  // Timestamps
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  imageUrl    String?  @map("image_url") 
+  createdAt   DateTime @default(now()) @map("createdAt")
+  updatedAt   DateTime @updatedAt @map("updatedAt")
 
-  @@unique([airlineId, order]) // Each airline has its own ordering
-  @@index([airlineId])
+  airline  Airline          @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  sections ManualSection[]
+
+  @@unique([airlineId, order], name: "manual_chapters_airlineId_order_key")
+  @@index([airlineId], name: "manual_chapters_airlineId_idx")
   @@map("manual_chapters")
 }
 
