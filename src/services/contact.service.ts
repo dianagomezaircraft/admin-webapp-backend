@@ -275,7 +275,7 @@ export class ContactService {
   }
 
   // ============================================
-  // CONTACTS
+  // CONTACTS - ACTUALIZADOS CON AIRLINE_ID
   // ============================================
 
   async getAllContacts(groupId: string, user: User, includeInactive: boolean = false) {
@@ -297,7 +297,11 @@ export class ContactService {
       throw error;
     }
 
-    const whereClause: any = { groupId };
+    const whereClause: any = { 
+      groupId,
+      // Validación adicional por airlineId
+      ...(user.role !== 'SUPER_ADMIN' && { airlineId: user.airlineId })
+    };
 
     if (!includeInactive) {
       whereClause.active = true;
@@ -311,6 +315,13 @@ export class ContactService {
             id: true,
             name: true,
             airlineId: true,
+          },
+        },
+        airline: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
           },
         },
       },
@@ -331,6 +342,13 @@ export class ContactService {
             airlineId: true,
           },
         },
+        airline: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       },
     });
 
@@ -340,8 +358,8 @@ export class ContactService {
       throw error;
     }
 
-    // Verify tenant isolation
-    if (user.role !== 'SUPER_ADMIN' && contact.group.airlineId !== user.airlineId) {
+    // Validación de tenant isolation por airlineId directo
+    if (user.role !== 'SUPER_ADMIN' && contact.airlineId !== user.airlineId) {
       const error: any = new Error('Access denied to this contact');
       error.statusCode = 403;
       throw error;
@@ -371,6 +389,13 @@ export class ContactService {
       throw error;
     }
 
+    // Validar que el usuario tenga airline asignada
+    if (!user.airlineId && user.role !== 'SUPER_ADMIN') {
+      const error: any = new Error('User must have an airline assigned');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Verify group exists and user has access
     const group = await prisma.contactGroup.findUnique({
       where: { id: groupId },
@@ -393,7 +418,10 @@ export class ContactService {
     let contactOrder = otherData.order;
     if (contactOrder === undefined || contactOrder === null) {
       const lastContact = await prisma.contact.findFirst({
-        where: { groupId },
+        where: { 
+          groupId,
+          airlineId: user.airlineId!
+        },
         orderBy: { order: 'desc' },
       });
       contactOrder = lastContact ? lastContact.order + 1 : 1;
@@ -413,6 +441,7 @@ export class ContactService {
         metadata: otherData.metadata || {},
         active: otherData.active !== undefined ? otherData.active : true,
         groupId,
+        airlineId: user.airlineId!,  // Asignar airlineId del usuario
       },
       include: {
         group: {
@@ -420,6 +449,13 @@ export class ContactService {
             id: true,
             name: true,
             airlineId: true,
+          },
+        },
+        airline: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
           },
         },
       },
@@ -442,8 +478,8 @@ export class ContactService {
       throw error;
     }
 
-    // Verify tenant isolation
-    if (user.role !== 'SUPER_ADMIN' && existingContact.group.airlineId !== user.airlineId) {
+    // Validación de tenant isolation por airlineId directo
+    if (user.role !== 'SUPER_ADMIN' && existingContact.airlineId !== user.airlineId) {
       const error: any = new Error('Access denied to this contact');
       error.statusCode = 403;
       throw error;
@@ -492,6 +528,13 @@ export class ContactService {
             airlineId: true,
           },
         },
+        airline: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       },
     });
 
@@ -501,9 +544,6 @@ export class ContactService {
   async deleteContact(id: string, user: User) {
     const existingContact = await prisma.contact.findUnique({
       where: { id },
-      include: {
-        group: true,
-      },
     });
 
     if (!existingContact) {
@@ -512,8 +552,8 @@ export class ContactService {
       throw error;
     }
 
-    // Verify tenant isolation
-    if (user.role !== 'SUPER_ADMIN' && existingContact.group.airlineId !== user.airlineId) {
+    // Validación de tenant isolation por airlineId directo
+    if (user.role !== 'SUPER_ADMIN' && existingContact.airlineId !== user.airlineId) {
       const error: any = new Error('Access denied to this contact');
       error.statusCode = 403;
       throw error;

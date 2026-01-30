@@ -22,6 +22,7 @@ model Airline {
   users           User[]
   manualChapters  ManualChapter[]
   contactGroups  ContactGroup[]
+  contacts       Contact[]
   
   @@map("airlines")
 }
@@ -199,30 +200,30 @@ model ContactGroup {
 // CONTACTS: Individual contacts within groups
 // ============================================
 model Contact {
-  id          String       @id @default(uuid())
-  firstName   String       @map("first_name")
-  lastName    String       @map("last_name")
-  title       String?      // e.g., "Executive Director", "Divisional Director"
-  company     String?      // e.g., "Aerospace Risk Transfer Solutions (ARTS)"
-  phone       String?      // e.g., "+1 (305) 812-0800"
-  email       String?
-  timezone    String?      // e.g., "UTC (-5)"
-  avatar      String?      // URL to avatar image
-  order       Int          @default(0) // Display order within group
-  active      Boolean      @default(true)
-  
-  // Belongs to a contact group
-  groupId     String       @map("group_id")
-  group       ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  
-  // Optional metadata
-  metadata    Json?        // Additional data like alternate phones, addresses, etc.
-  
-  // Timestamps
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  title     String?
+  company   String?
+  phone     String?
+  email     String?
+  timezone  String?
+  avatar    String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  groupId   String   @map("group_id")
+  airlineId String   @map("airline_id")  // ← SIN @db.Uuid
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@index([groupId])
-  @@index([lastName, firstName])
+  // Relations
+  group   ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  airline Airline      @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+
+  @@index([groupId], map: "idx_contacts_group_id")
+  @@index([lastName, firstName], map: "idx_contacts_name")
+  @@index([airlineId], map: "idx_contacts_airline_id")
+  @@index([airlineId, groupId], map: "idx_contacts_airline_group")
   @@map("contacts")
 }
