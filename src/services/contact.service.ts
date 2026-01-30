@@ -15,6 +15,7 @@ interface CreateContactGroupDto {
   description?: string;
   order?: number;
   active?: boolean;
+  airlineId?: string; // AGREGADO: Permitir pasar airlineId explícitamente para SUPER_ADMIN
 }
 
 interface UpdateContactGroupDto {
@@ -126,7 +127,7 @@ export class ContactService {
   }
 
   async createGroup(data: CreateContactGroupDto, user: User) {
-    const { name, description, order, active } = data;
+    const { name, description, order, active, airlineId } = data;
 
     if (!name || !name.trim()) {
       const error: any = new Error('Name is required');
@@ -134,17 +135,32 @@ export class ContactService {
       throw error;
     }
 
-    if (!user.airlineId && user.role !== 'SUPER_ADMIN') {
-      const error: any = new Error('Airline ID is required');
-      error.statusCode = 400;
-      throw error;
+    // CAMBIO PRINCIPAL: Determinar el airlineId correcto
+    let targetAirlineId: string;
+    
+    if (user.role === 'SUPER_ADMIN') {
+      // Si es SUPER_ADMIN, debe proporcionar airlineId explícitamente
+      if (!airlineId) {
+        const error: any = new Error('Airline ID is required for super admin');
+        error.statusCode = 400;
+        throw error;
+      }
+      targetAirlineId = airlineId;
+    } else {
+      // Si no es SUPER_ADMIN, usar su airlineId
+      if (!user.airlineId) {
+        const error: any = new Error('User must have an airline assigned');
+        error.statusCode = 400;
+        throw error;
+      }
+      targetAirlineId = user.airlineId;
     }
 
     // Get next order if not provided
     let groupOrder = order;
     if (groupOrder === undefined || groupOrder === null) {
       const lastGroup = await prisma.contactGroup.findFirst({
-        where: { airlineId: user.airlineId! },
+        where: { airlineId: targetAirlineId },
         orderBy: { order: 'desc' },
       });
       groupOrder = lastGroup ? lastGroup.order + 1 : 1;
@@ -156,7 +172,7 @@ export class ContactService {
         description: description?.trim(),
         order: groupOrder,
         active: active !== undefined ? active : true,
-        airlineId: user.airlineId!,
+        airlineId: targetAirlineId, // Usar el airlineId determinado
       },
       include: {
         airline: {
@@ -389,13 +405,6 @@ export class ContactService {
       throw error;
     }
 
-    // Validar que el usuario tenga airline asignada
-    if (!user.airlineId && user.role !== 'SUPER_ADMIN') {
-      const error: any = new Error('User must have an airline assigned');
-      error.statusCode = 400;
-      throw error;
-    }
-
     // Verify group exists and user has access
     const group = await prisma.contactGroup.findUnique({
       where: { id: groupId },
@@ -414,13 +423,22 @@ export class ContactService {
       throw error;
     }
 
+    // CAMBIO: Usar el airlineId del grupo (en lugar del usuario)
+    const targetAirlineId = group.airlineId;
+
+    if (!targetAirlineId) {
+      const error: any = new Error('Contact group must have an airline assigned');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Get next order if not provided
     let contactOrder = otherData.order;
     if (contactOrder === undefined || contactOrder === null) {
       const lastContact = await prisma.contact.findFirst({
         where: { 
           groupId,
-          airlineId: user.airlineId!
+          airlineId: targetAirlineId
         },
         orderBy: { order: 'desc' },
       });
@@ -441,7 +459,7 @@ export class ContactService {
         metadata: otherData.metadata || {},
         active: otherData.active !== undefined ? otherData.active : true,
         groupId,
-        airlineId: user.airlineId!,  // Asignar airlineId del usuario
+        airlineId: targetAirlineId,  // Usar airlineId del grupo
       },
       include: {
         group: {
