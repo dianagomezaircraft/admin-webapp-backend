@@ -116,7 +116,7 @@ model ManualSection {
   description String?       @db.Text
   order       Int           // Display order within chapter
   active      Boolean       @default(true)
-  
+  imageUrl    String?
   // Belongs to a chapter
   chapterId   String
   chapter     ManualChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
