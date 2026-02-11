@@ -117,6 +117,7 @@ export class AuthService {
     // 6. Retornar nuevo access token y datos del usuario
     return {
       accessToken,
+      refreshToken,
       user: {
         id: storedToken.user.id,
         email: storedToken.user.email,

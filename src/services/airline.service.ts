@@ -60,21 +60,42 @@ export class AirlineService {
     id: string,
     data: {
       name?: string;
+      code?: string;
       logo?: string;
       branding?: any;
       active?: boolean;
     }
   ) {
-    const airline = await this.getById(id);
+    // Verify airline exists
+    await this.getById(id);
+
+    // If code is being updated, check it doesn't conflict with another airline
+    if (data.code) {
+      const existing = await prisma.airline.findUnique({
+        where: { code: data.code },
+      });
+
+      if (existing && existing.id !== id) {
+        throw new Error('Airline code already exists');
+      }
+    }
+
+    // Build update data object, only including fields that are provided
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.code !== undefined) updateData.code = data.code.toUpperCase();
+    if (data.logo !== undefined) updateData.logo = data.logo;
+    if (data.active !== undefined) updateData.active = data.active;
+    
+    // Handle branding specially - only update if provided
+    if (data.branding !== undefined) {
+      updateData.branding = data.branding;
+    }
 
     return prisma.airline.update({
       where: { id },
-      data: {
-        name: data.name,
-        logo: data.logo,
-        branding: data.branding !== undefined ? data.branding : undefined,
-        active: data.active,
-      },
+      data: updateData,
     });
   }
 

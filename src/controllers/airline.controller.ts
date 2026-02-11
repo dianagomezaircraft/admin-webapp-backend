@@ -10,8 +10,9 @@ export class AirlineController {
       const includeInactive = req.query.includeInactive === 'true';
       const airlines = await airlineService.getAll(includeInactive);
       return ApiResponse.success(res, airlines);
-    } catch (error: any) {
-      return ApiResponse.error(res, error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return ApiResponse.error(res, message);
     }
   }
 
@@ -20,8 +21,9 @@ export class AirlineController {
       const { id } = req.params;
       const airline = await airlineService.getById(id);
       return ApiResponse.success(res, airline);
-    } catch (error: any) {
-      return ApiResponse.notFound(res, error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return ApiResponse.notFound(res, message);
     }
   }
 
@@ -41,26 +43,33 @@ export class AirlineController {
       });
 
       return ApiResponse.created(res, airline, 'Airline created successfully');
-    } catch (error: any) {
-      return ApiResponse.error(res, error.message, 400);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return ApiResponse.error(res, message, 400);
     }
   }
 
   async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { name, logo, branding, active } = req.body;
+      const { name, code, logo, branding, active } = req.body; // ✅ Added 'code' here
+
+      // Add debug logging
+      console.log('Update request:', { id, body: req.body });
 
       const airline = await airlineService.update(id, {
         name,
+        code, // ✅ Pass code to service
         logo,
         branding,
         active,
       });
 
       return ApiResponse.success(res, airline, 'Airline updated successfully');
-    } catch (error: any) {
-      return ApiResponse.error(res, error.message, 400);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Update error:', error); // Debug log
+      return ApiResponse.error(res, message, 400);
     }
   }
 
@@ -69,8 +78,9 @@ export class AirlineController {
       const { id } = req.params;
       await airlineService.delete(id);
       return ApiResponse.success(res, null, 'Airline deleted successfully');
-    } catch (error: any) {
-      return ApiResponse.error(res, error.message, 400);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return ApiResponse.error(res, message, 400);
     }
   }
 
@@ -80,6 +90,7 @@ export class AirlineController {
       const airline = await airlineService.deactivate(id);
       return ApiResponse.success(res, airline, 'Airline deactivated successfully');
     } catch (error: any) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
       return ApiResponse.error(res, error.message, 400);
     }
   }
@@ -89,8 +100,9 @@ export class AirlineController {
       const { id } = req.params;
       const airline = await airlineService.activate(id);
       return ApiResponse.success(res, airline, 'Airline activated successfully');
-    } catch (error: any) {
-      return ApiResponse.error(res, error.message, 400);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return ApiResponse.error(res, message, 400);
     }
   }
 }
