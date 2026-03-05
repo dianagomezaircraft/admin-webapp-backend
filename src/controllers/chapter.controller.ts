@@ -221,99 +221,143 @@ export class ChapterController {
   }
 
   /**
-   * Update chapter
-   * @route PUT /api/chapters/:id
-   */
-  async update(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const user = req.user;
+ * Update chapter
+ * @route PUT /api/chapters/:id
+ * 
+ * ✨ NEW: Automatically creates template update notifications when a template is modified
+ */
+async update(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const user = req.user;
 
-      if (!user) {
-        res.status(401).json({ error: 'Unauthorized' });
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { title, description, order, active, imageUrl } = req.body;
+
+    // Check if chapter exists
+    const existingChapter = await prisma.manualChapter.findUnique({
+      where: { id },
+    });
+
+    if (!existingChapter) {
+      res.status(404).json({ error: 'Chapter not found' });
+      return;
+    }
+
+    // Verify tenant isolation
+    if (user.role !== 'SUPER_ADMIN' && existingChapter.airlineId !== user.airlineId) {
+      res.status(403).json({ error: 'Access denied to this chapter' });
+      return;
+    }
+
+    // Build update data
+    const updateData: any = {};
+    const hasChanges: any = {}; // Track what changed for template updates
+
+    if (title !== undefined) {
+      if (!title.trim()) {
+        res.status(400).json({ error: 'Title cannot be empty' });
         return;
       }
-
-      const { title, description, order, active, imageUrl } = req.body; // ✅ Added imageUrl
-
-      // Check if chapter exists
-      const existingChapter = await prisma.manualChapter.findUnique({
-        where: { id },
-      });
-
-      if (!existingChapter) {
-        res.status(404).json({ error: 'Chapter not found' });
-        return;
+      updateData.title = title.trim();
+      if (existingChapter.title !== title.trim()) {
+        hasChanges.title = title.trim();
       }
+    }
 
-      // Verify tenant isolation
-      if (user.role !== 'SUPER_ADMIN' && existingChapter.airlineId !== user.airlineId) {
-        res.status(403).json({ error: 'Access denied to this chapter' });
-        return;
+    if (description !== undefined) {
+      const newDescription = description?.trim() || null;
+      updateData.description = newDescription;
+      if (existingChapter.description !== newDescription) {
+        hasChanges.description = newDescription;
       }
+    }
 
-      // Build update data
-      const updateData: any = {};
+    if (order !== undefined) {
+      updateData.order = order;
+    }
 
-      if (title !== undefined) {
-        if (!title.trim()) {
-          res.status(400).json({ error: 'Title cannot be empty' });
-          return;
-        }
-        updateData.title = title.trim();
+    if (active !== undefined) {
+      updateData.active = active;
+    }
+
+    if (imageUrl !== undefined) {
+      const newImageUrl = imageUrl || null;
+      updateData.imageUrl = newImageUrl;
+      if (existingChapter.imageUrl !== newImageUrl) {
+        hasChanges.imageUrl = newImageUrl;
       }
+    }
 
-      if (description !== undefined) {
-        updateData.description = description?.trim() || null;
-      }
+    updateData.updatedAt = new Date();
 
-      if (order !== undefined) {
-        updateData.order = order;
-      }
+    // ✨ NEW: If this is a template and has changes, increment version and create update notifications
+    if (existingChapter.isTemplate && Object.keys(hasChanges).length > 0) {
+      updateData.templateVersion = existingChapter.templateVersion + 1;
 
-      if (active !== undefined) {
-        updateData.active = active;
-      }
-
-      // ✅ Handle imageUrl update
-      if (imageUrl !== undefined) {
-        updateData.imageUrl = imageUrl || null;
-      }
-
-      updateData.updatedAt = new Date();
-
-      const chapter = await prisma.manualChapter.update({
-        where: { id },
-        data: updateData,
-        include: {
-          airline: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-            },
-          },
-          _count: {
-            select: {
-              sections: true,
-            },
-          },
+      // Get all forked chapters
+      const forkedChapters = await prisma.manualChapter.findMany({
+        where: {
+          templateId: id,
+        },
+        select: {
+          id: true,
         },
       });
 
-      res.status(200).json({
-        success: true,
-        data: chapter,
-        message: 'Chapter updated successfully',
-      });
-    } catch (error) {
-      console.error('Error updating chapter:', error);
-      res.status(500).json({
-        error: 'Failed to update chapter',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      // Create template update records for each fork
+      if (forkedChapters.length > 0) {
+        await prisma.templateUpdate.createMany({
+          data: forkedChapters.map((fork) => ({
+            id: `${fork.id}-${Date.now()}`, // Simple ID generation
+            chapterId: fork.id,
+            templateId: id,
+            status: 'pending',
+            changes: hasChanges,
+          })),
+        });
+      }
     }
+
+    const chapter = await prisma.manualChapter.update({
+      where: { id },
+      data: updateData,
+      include: {
+        airline: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        _count: {
+          select: {
+            sections: true,
+            forkedChapters: true, // ✨ NEW: Include forked chapters count
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: chapter,
+      message: existingChapter.isTemplate 
+        ? `Template updated successfully (version ${updateData.templateVersion})` 
+        : 'Chapter updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating chapter:', error);
+    res.status(500).json({
+      error: 'Failed to update chapter',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
+}
 
   /**
    * Delete chapter

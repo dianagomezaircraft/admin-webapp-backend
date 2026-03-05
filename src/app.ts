@@ -13,6 +13,8 @@ import sectionRoutes from './routes/section.routes';
 import contentRoutes from './routes/content.routes';
 import contactRoutes from './routes/contact.routes';
 import searchRoutes from './routes/search.routes';
+import templateRoutes from './routes/template.routes';
+
 // Create Express application
 const app = express();
 
@@ -78,6 +80,7 @@ app.use('/api/sections', sectionRoutes);
 app.use('/api/contents', contentRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/templates', templateRoutes);
 
 // ============================================
 // 404 HANDLER

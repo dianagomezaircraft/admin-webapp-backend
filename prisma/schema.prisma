@@ -60,6 +60,9 @@ model User {
   // Refresh tokens for JWT
   refreshTokens     RefreshToken[]
   
+  // Template updates reviewed by this user
+  reviewedTemplateUpdates TemplateUpdate[]
+  
   // Timestamps
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -95,16 +98,59 @@ model ManualChapter {
   order       Int
   active      Boolean  @default(true)
   airlineId   String
-  imageUrl    String?  @map("image_url") 
+  imageUrl    String?  @map("image_url")
+  
+  // ✨ TEMPLATE SYSTEM FIELDS
+  templateId      String?   @map("templateId")     // References the template this was forked from
+  isTemplate      Boolean   @default(false) @map("isTemplate")  // Can be used as template
+  templateVersion Int       @default(1) @map("templateVersion") // Version number
+  lastSyncedAt    DateTime? @map("lastSyncedAt")   // Last sync with template
+  
   createdAt   DateTime @default(now()) @map("createdAt")
   updatedAt   DateTime @updatedAt @map("updatedAt")
 
+  // Relations
   airline  Airline          @relation(fields: [airlineId], references: [id], onDelete: Cascade)
   sections ManualSection[]
+  
+  // ✨ Template relationships
+  template        ManualChapter?   @relation("ChapterTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  forkedChapters  ManualChapter[]  @relation("ChapterTemplate")
+  
+  // Template updates where this is the source chapter
+  templateUpdatesAsTemplate TemplateUpdate[] @relation("TemplateSource")
+  // Template updates where this is the target chapter
+  templateUpdatesAsChapter  TemplateUpdate[] @relation("ChapterTarget")
 
   @@unique([airlineId, order], name: "manual_chapters_airlineId_order_key")
   @@index([airlineId], name: "manual_chapters_airlineId_idx")
+  @@index([templateId], name: "manual_chapters_templateId_idx")
+  @@index([isTemplate], name: "manual_chapters_isTemplate_idx")
   @@map("manual_chapters")
+}
+
+// ============================================
+// TEMPLATE UPDATES: Track pending template changes
+// ============================================
+model TemplateUpdate {
+  id         String    @id @default(uuid())
+  chapterId  String    @map("chapterId")
+  templateId String    @map("templateId")
+  status     String    @default("pending") // pending, approved, rejected
+  changes    Json      // JSON with the diff/changes from template
+  createdAt  DateTime  @default(now()) @map("createdAt")
+  reviewedAt DateTime? @map("reviewedAt")
+  reviewedBy String?   @map("reviewedBy")
+
+  // Relations
+  chapter  ManualChapter @relation("ChapterTarget", fields: [chapterId], references: [id], onDelete: Cascade)
+  template ManualChapter @relation("TemplateSource", fields: [templateId], references: [id], onDelete: Cascade)
+  reviewer User?         @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([chapterId], name: "template_updates_chapterId_idx")
+  @@index([templateId], name: "template_updates_templateId_idx")
+  @@index([status], name: "template_updates_status_idx")
+  @@map("template_updates")
 }
 
 // ============================================
@@ -212,7 +258,7 @@ model Contact {
   order     Int      @default(0)
   active    Boolean  @default(true)
   groupId   String   @map("group_id")
-  airlineId String   @map("airline_id")  // ← SIN @db.Uuid
+  airlineId String   @map("airline_id")
   metadata  Json?    @db.JsonB
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
