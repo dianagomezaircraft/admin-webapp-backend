@@ -23,3 +23,4 @@ export const requireRole = (...allowedRoles: Role[]) => {
 export const requireSuperAdmin = requireRole(Role.SUPER_ADMIN);
 export const requireAdmin = requireRole(Role.SUPER_ADMIN, Role.ADMIN);
 export const requireEditor = requireRole(Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR);
+export const requireViewer = requireRole(Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER);

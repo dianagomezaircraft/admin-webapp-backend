@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AirlineController } from '../controllers/airline.controller';
 import { authenticate } from '../middleware/auth';
-import { requireSuperAdmin, requireEditor } from '../middleware/rbac';
+import { requireSuperAdmin, requireEditor, requireViewer } from '../middleware/rbac';
 
 const router = Router();
 const airlineController = new AirlineController();
@@ -90,7 +90,7 @@ router.get('/', requireSuperAdmin, (req, res) =>
  *       404:
  *         description: Airline not found
  */
-router.get('/:id', requireEditor, (req, res) => 
+router.get('/:id', requireViewer, (req, res) => 
   airlineController.getById(req, res)
 );
 
