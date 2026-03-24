@@ -26,7 +26,7 @@ export class EmailService {
       // Enviar email
       const { data, error } = await resend.emails.send({
         from: 'ARTS Claims <onboarding@resend.dev>', // ⚠️ Cambiar por tu dominio verificado
-        to: email,
+        to:[email],
         subject: 'Reset Your Password - ARTS Claims',
         html: htmlContent,
       });
