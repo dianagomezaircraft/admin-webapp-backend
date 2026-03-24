@@ -1,5 +1,7 @@
 import {prisma} from '../config/database';
 import { hashPassword, comparePassword } from '../utils/password';
+import { emailService } from './email.service';
+
 import { 
   generateAccessToken, 
   generateRefreshToken, 
@@ -148,6 +150,7 @@ export class AuthService {
    * REQUEST PASSWORD RESET: Generate reset token and send email
    */
   async requestPasswordReset(email: string) {
+    try{
     // 1. Buscar usuario
     const user = await prisma.user.findUnique({
       where: { email },
@@ -159,23 +162,28 @@ export class AuthService {
     }
 
     // 2. Generar token de reset (random)
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date();
-    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // 1 hora
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date();
+      resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // 1 hora
 
-    // 3. Guardar token en la BD
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetToken,
-        resetTokenExpiry,
-      },
-    });
+      // 3. Guardar token en la BD
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetToken,
+          resetTokenExpiry,
+        },
+      });
 
-    // 4. TODO: Enviar email con el link de reset
-    // Por ahora solo retornamos el token para testing
-    console.log(`Reset token for ${email}: ${resetToken}`);
-    // En producción: await emailService.sendPasswordResetEmail(user.email, resetToken);
+      // 4. Enviar email con el link de reset
+      const userName = `${user.firstName} ${user.lastName}`;
+      await emailService.sendPasswordResetEmail(user.email, resetToken, userName);
+
+      console.log(`✅ Password reset email sent to: ${user.email}`);
+    } catch (error) {
+      console.error('Error in requestPasswordReset:', error);
+      throw new Error('Failed to process password reset request');
+    }
   }
 
   /**
