@@ -90,7 +90,7 @@ router.get('/', requireSuperAdmin, (req, res) =>
  *       404:
  *         description: Airline not found
  */
-router.get('/:id', requireEditor, (req, res) => 
+router.get('/:id', (req, res) => 
   airlineController.getById(req, res)
 );
 
