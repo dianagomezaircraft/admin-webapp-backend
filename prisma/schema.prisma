@@ -62,6 +62,8 @@ model User {
   
   // Template updates reviewed by this user
   reviewedTemplateUpdates TemplateUpdate[]
+
+  favorites ChapterFavorite[] 
   
   // Timestamps
   createdAt         DateTime  @default(now())
@@ -116,6 +118,8 @@ model ManualChapter {
   // ✨ Template relationships
   template        ManualChapter?   @relation("ChapterTemplate", fields: [templateId], references: [id], onDelete: SetNull)
   forkedChapters  ManualChapter[]  @relation("ChapterTemplate")
+
+  favorites ChapterFavorite[]
   
   // Template updates where this is the source chapter
   templateUpdatesAsTemplate TemplateUpdate[] @relation("TemplateSource")
@@ -272,4 +276,19 @@ model Contact {
   @@index([airlineId], map: "idx_contacts_airline_id")
   @@index([airlineId, groupId], map: "idx_contacts_airline_group")
   @@map("contacts")
+}
+
+model ChapterFavorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  chapterId String   @map("chapter_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter ManualChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([userId],    name: "chapter_favorites_userId_idx")
+  @@index([chapterId], name: "chapter_favorites_chapterId_idx")
+  @@map("chapter_favorites")
 }

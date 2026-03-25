@@ -14,6 +14,7 @@ import contentRoutes from './routes/content.routes';
 import contactRoutes from './routes/contact.routes';
 import searchRoutes from './routes/search.routes';
 import templateRoutes from './routes/template.routes';
+import favoritesRouter from './routes/favorites.routes';
 
 // Create Express application
 const app = express();
@@ -81,6 +82,8 @@ app.use('/api/contents', contentRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/favorites', favoritesRouter);
+
 
 // ============================================
 // 404 HANDLER
