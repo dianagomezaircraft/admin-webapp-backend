@@ -595,4 +595,219 @@ export class TemplateController {
       });
     }
   }
+
+
+  /**
+ * Get sync status of all forks for a template
+ * @route GET /api/templates/:templateId/sync-status
+ */
+async getTemplateSyncStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const { templateId } = req.params;
+    const user = req.user;
+
+    if (!user || user.role !== 'SUPER_ADMIN') {
+      res.status(403).json({ error: 'SUPER_ADMIN only' });
+      return;
+    }
+
+    const template = await prisma.manualChapter.findUnique({
+      where: { id: templateId },
+      select: { id: true, title: true, templateVersion: true },
+    });
+
+    if (!template) {
+      res.status(404).json({ error: 'Template not found' });
+      return;
+    }
+
+    const forks = await prisma.manualChapter.findMany({
+      where: { templateId },
+      include: {
+        airline: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const forksWithStatus = forks.map((fork) => ({
+      id: fork.id,
+      title: fork.title,
+      airline: fork.airline,
+      forkVersion: fork.templateVersion,
+      templateVersion: template.templateVersion,
+      isOutdated: fork.templateVersion < template.templateVersion,
+      lastSyncedAt: fork.lastSyncedAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        template,
+        forks: forksWithStatus,
+        outdatedCount: forksWithStatus.filter((f) => f.isOutdated).length,
+        totalForks: forks.length,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch sync status' });
+  }
+}
+
+/**
+ * Push template update to all outdated forks (overwrite)
+ * @route POST /api/templates/:templateId/push-to-forks
+ */
+async pushToAllForks(req: Request, res: Response): Promise<void> {
+  try {
+    const { templateId } = req.params;
+    const { forkIds } = req.body; // optional: specific fork IDs, else all outdated
+    const user = req.user;
+
+    if (!user || user.role !== 'SUPER_ADMIN') {
+      res.status(403).json({ error: 'SUPER_ADMIN only' });
+      return;
+    }
+
+    // Get template with full content
+    const template = await prisma.manualChapter.findUnique({
+      where: { id: templateId },
+      include: {
+        sections: {
+          where: { active: true },
+          orderBy: { order: 'asc' },
+          include: {
+            contents: {
+              where: { active: true },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!template || !template.isTemplate) {
+      res.status(404).json({ error: 'Template not found' });
+      return;
+    }
+
+    // Determine which forks to update
+    const whereClause: any = { templateId };
+    if (forkIds && forkIds.length > 0) {
+      whereClause.id = { in: forkIds };
+    } else {
+      // Only outdated forks
+      whereClause.templateVersion = { lt: template.templateVersion };
+    }
+
+    const forksToUpdate = await prisma.manualChapter.findMany({
+      where: whereClause,
+      select: { id: true },
+    });
+
+    if (forksToUpdate.length === 0) {
+      res.status(200).json({
+        success: true,
+        message: 'All forks are already up to date',
+        results: [],
+      });
+      return;
+    }
+
+    // Process each fork in parallel
+    const results = await Promise.allSettled(
+      forksToUpdate.map(async (fork) => {
+        return prisma.$transaction(async (tx) => {
+          // 1. Delete existing sections + contents of fork
+          const existingSections = await tx.manualSection.findMany({
+            where: { chapterId: fork.id },
+            select: { id: true },
+          });
+          await tx.manualContent.deleteMany({
+            where: { sectionId: { in: existingSections.map((s) => s.id) } },
+          });
+          await tx.manualSection.deleteMany({
+            where: { chapterId: fork.id },
+          });
+
+          // 2. Re-create sections + contents from template
+          for (const section of template.sections) {
+            await tx.manualSection.create({
+              data: {
+                title: section.title,
+                description: section.description,
+                order: section.order,
+                active: section.active,
+                imageUrl: section.imageUrl,
+                chapterId: fork.id,
+                contents: {
+                  create: section.contents.map((c) => ({
+                    title: c.title,
+                    type: c.type,
+                    content: c.content,
+                    order: c.order,
+                    active: c.active,
+                    metadata: c.metadata || undefined,
+                  })),
+                },
+              },
+            });
+          }
+
+          // 3. Update fork metadata
+          await tx.manualChapter.update({
+            where: { id: fork.id },
+            data: {
+              title: template.title,
+              description: template.description,
+              imageUrl: template.imageUrl,
+              templateVersion: template.templateVersion,
+              lastSyncedAt: new Date(),
+            },
+          });
+
+          // 4. Log the sync as a TemplateUpdate record
+          await tx.templateUpdate.create({
+            data: {
+              chapterId: fork.id,
+              templateId: template.id,
+              status: 'approved',
+              changes: {
+                title: template.title,
+                description: template.description,
+                imageUrl: template.imageUrl,
+              },
+              reviewedAt: new Date(),
+              reviewedBy: user.id,
+            },
+          });
+
+          return fork.id;
+        });
+      })
+    );
+
+    const succeeded = results
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => (r as PromiseFulfilledResult<string>).value);
+
+    const failed = results
+      .filter((r) => r.status === 'rejected')
+      .map((r, i) => ({
+        forkId: forksToUpdate[i].id,
+        error: (r as PromiseRejectedResult).reason?.message,
+      }));
+
+    res.status(200).json({
+      success: true,
+      data: { succeeded, failed },
+      message: `Synced ${succeeded.length} forks, ${failed.length} failed`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to push updates',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+  }
+  
 }

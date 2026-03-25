@@ -81,4 +81,12 @@ router.post('/updates/:updateId/reject', requireEditor, (req, res) =>
   templateController.rejectUpdate(req, res)
 );
 
+router.get('/:templateId/sync-status', requireSuperAdmin, (req, res) =>
+  templateController.getTemplateSyncStatus(req, res)
+);
+
+router.post('/:templateId/push-to-forks', requireSuperAdmin, (req, res) =>
+  templateController.pushToAllForks(req, res)
+);
+
 export default router;
