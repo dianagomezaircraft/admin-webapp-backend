@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-
+import { bumpTemplateVersionIfNeeded } from '../lib/template-version';
 export class SectionController {
   /**
    * Get all sections for a chapter
@@ -195,6 +195,9 @@ export class SectionController {
         },
       });
 
+      await bumpTemplateVersionIfNeeded(chapterId);
+
+
       res.status(201).json({
         success: true,
         data: section,
@@ -287,6 +290,8 @@ export class SectionController {
         },
       });
 
+      await bumpTemplateVersionIfNeeded(existingSection.chapter.id);
+
       res.status(200).json({
         success: true,
         data: section,
@@ -339,6 +344,7 @@ export class SectionController {
       //   // Call your storage service to delete the image
       //   // await storageService.deleteSectionImage(existingSection.imageUrl);
       // }
+      await bumpTemplateVersionIfNeeded(existingSection.chapterId);
 
       await prisma.manualSection.delete({
         where: { id },

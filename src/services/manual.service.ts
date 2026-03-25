@@ -322,4 +322,12 @@ async getAllContents(sectionId: string, includeInactive = false) {
       where: { id },
     });
   }
+
+  async getChapterIdBySectionId(sectionId: string): Promise<string | null> {
+  const section = await prisma.manualSection.findUnique({
+    where: { id: sectionId },
+    select: { chapterId: true },
+  });
+  return section?.chapterId ?? null;
+}
 }

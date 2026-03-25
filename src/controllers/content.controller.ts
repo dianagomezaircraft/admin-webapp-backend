@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { ManualService } from '../services/manual.service';
 import { ApiResponse } from '../utils/api-response';
 import { ContentType, Role } from '@prisma/client';
+import { bumpTemplateVersionIfNeeded } from '../lib/template-version'; // ✅ Import
 
 const manualService = new ManualService();
 
@@ -16,10 +17,7 @@ export class ContentController {
         return ApiResponse.forbidden(res);
       }
 
-      const contents = await manualService.getAllContents(
-        sectionId,
-        includeInactive
-      );
+      const contents = await manualService.getAllContents(sectionId, includeInactive);
       return ApiResponse.success(res, contents);
     } catch (error: any) {
       return ApiResponse.error(res, error.message);
@@ -49,13 +47,9 @@ export class ContentController {
       const airlineId = req.user?.airlineId;
 
       if (!title || !type || !content || order === undefined) {
-        return ApiResponse.badRequest(
-          res,
-          'Title, type, content, and order are required'
-        );
+        return ApiResponse.badRequest(res, 'Title, type, content, and order are required');
       }
 
-      // Validate content type
       if (!Object.values(ContentType).includes(type)) {
         return ApiResponse.badRequest(
           res,
@@ -75,6 +69,10 @@ export class ContentController {
         metadata,
       });
 
+      // ✅ Bump template version — sectionId is already in req.params
+      const chapterId = await manualService.getChapterIdBySectionId(sectionId);
+      if (chapterId) await bumpTemplateVersionIfNeeded(chapterId);
+
       return ApiResponse.created(res, newContent, 'Content created successfully');
     } catch (error: any) {
       return ApiResponse.error(res, error.message, 400);
@@ -87,7 +85,6 @@ export class ContentController {
       const { title, type, content, order, metadata, active } = req.body;
       const airlineId = req.user?.airlineId;
 
-      // Validate content type if provided
       if (type && !Object.values(ContentType).includes(type)) {
         return ApiResponse.badRequest(
           res,
@@ -108,6 +105,12 @@ export class ContentController {
         active,
       });
 
+      // ✅ sectionId is a flat field on the returned content record
+      const chapterId = await manualService.getChapterIdBySectionId(
+        updatedContent.sectionId
+      );
+      if (chapterId) await bumpTemplateVersionIfNeeded(chapterId);
+
       return ApiResponse.success(res, updatedContent, 'Content updated successfully');
     } catch (error: any) {
       return ApiResponse.error(res, error.message, 400);
@@ -123,7 +126,17 @@ export class ContentController {
         return ApiResponse.forbidden(res);
       }
 
+      // ✅ Fetch content BEFORE deleting so we can still read sectionId
+      const existingContent = await manualService.getContentById(id, airlineId!);
+      const chapterId = await manualService.getChapterIdBySectionId(
+        existingContent.sectionId  // sectionId is a flat field, no relation needed
+      );
+
       await manualService.deleteContent(id, airlineId!);
+
+      // ✅ Bump after confirming deletion succeeded
+      if (chapterId) await bumpTemplateVersionIfNeeded(chapterId);
+
       return ApiResponse.success(res, null, 'Content deleted successfully');
     } catch (error: any) {
       return ApiResponse.error(res, error.message, 400);
