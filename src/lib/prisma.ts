@@ -4,10 +4,10 @@ import { Pool } from 'pg';
 
 // Create a PostgreSQL connection pool with explicit configuration
 const pool = new Pool({
-  host: 'aws-1-us-east-1.pooler.supabase.com',
+  host: 'aws-0-us-east-1.pooler.supabase.com',
   port: 5432,
-  user: 'postgres.tllcfupbarosdeeujakl',
-  password: 'airtooradmin1',
+  user: 'postgres.hnilewbvepntaraptxkn',
+  password: 'root.2026*-',
   database: 'postgres',
 });
 
