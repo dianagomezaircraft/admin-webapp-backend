@@ -71,11 +71,13 @@ function allowedFrameOrigins(): string[] {
 }
 
 function serveSiteEnabled(): boolean {
-  return (
-    process.env.SERVE_SITE === '1' ||
-    Boolean(process.env.RENDER) ||
-    Boolean(process.env.RENDER_EXTERNAL_URL)
-  );
+  // Opt-in only — do not auto-serve a frontend on Render
+  return process.env.SERVE_SITE === '1';
+}
+
+/** Softema HTML/app proxy (login, dashboard, assets). Off by default; set SOFEMA_SITE_PROXY=1 */
+function sofemaSiteProxyEnabled(): boolean {
+  return process.env.SOFEMA_SITE_PROXY === '1';
 }
 
 function rewriteLocation(value: string, isApi: boolean): string {
@@ -499,13 +501,27 @@ portalRouter.get('/healthz', (req, res, next) => {
   proxyRequest(req, res).catch(next);
 });
 
-/** Catch-all Softema site proxy (login, dashboard, assets, etc.) */
+/** Softema site proxy for iframe paths (login, dashboard, assets). Root `/` is never proxied. */
 export function sofemaCatchAll(req: Request, res: Response, next: NextFunction): void {
-  if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) {
+  if (
+    req.path === '/' ||
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/api-docs') ||
+    req.path.startsWith('/health')
+  ) {
     next();
     return;
   }
+
   if (tryServeSite(req, res)) return;
+
+  // Only proxy Softema HTML/app when explicitly enabled (iframe embeds).
+  // /__api and auth bridge stay available via portalRouter regardless.
+  if (!sofemaSiteProxyEnabled()) {
+    next();
+    return;
+  }
+
   proxyRequest(req, res).catch(next);
 }
 
@@ -515,9 +531,14 @@ export function logSofemaProxyReady(): void {
   console.log(`  Public origin:  ${origin}`);
   console.log(`  Frame allow:    ${allowedFrameOrigins().join(', ')}`);
   console.log(`  Health:         ${origin}/healthz`);
-  console.log(`  Softema login:  ${origin}/login`);
   console.log(`  Softema API:    ${origin}${API_PREFIX}/api/...`);
+  console.log(`  Auth bridge:    ${origin}/__auth_bridge`);
+  if (sofemaSiteProxyEnabled()) {
+    console.log(`  Softema site:   ON  (e.g. ${origin}/login)`);
+  } else {
+    console.log('  Softema site:   OFF (set SOFEMA_SITE_PROXY=1 to proxy /login, /dashboard, etc.)');
+  }
   if (serveSiteEnabled()) {
-    console.log(`  ARTS site:      ${origin}/portal.html  (when files exist in portal_serve/)`);
+    console.log(`  Local static:   ${origin}/portal.html  (SERVE_SITE=1)`);
   }
 }

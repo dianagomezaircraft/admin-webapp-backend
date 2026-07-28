@@ -61,8 +61,23 @@ if (process.env.NODE_ENV === 'development') {
 setupSwagger(app);
 
 // ============================================
-// HEALTH CHECK
+// HEALTH CHECK / ROOT
 // ============================================
+
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    service: 'admin-portal-backend',
+    health: '/health',
+    api: '/api',
+    docs: '/api-docs',
+    sofemaProxy: {
+      api: '/__api',
+      authBridge: '/__auth_bridge',
+      health: '/healthz',
+    },
+  });
+});
 
 app.get('/health', (req: Request, res: Response) => {
   res.json({
