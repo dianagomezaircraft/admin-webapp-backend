@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import app from './app';
 import testDatabaseConnection from './config/database';
+import { logSofemaProxyReady } from './portal_serve/sofema-proxy';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -26,6 +27,7 @@ const PORT = process.env.PORT || 3001;
     console.log(`Chapters endpoint: http://localhost:${PORT}/api/chapters/`);
     console.log(`Contents endpoint: http://localhost:${PORT}/api/contents/`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logSofemaProxyReady();
   });
 
   // Manejo de señales de cierre

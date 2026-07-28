@@ -15,6 +15,7 @@ import contactRoutes from './routes/contact.routes';
 import searchRoutes from './routes/search.routes';
 import templateRoutes from './routes/template.routes';
 import favoritesRouter from './routes/favorites.routes';
+import { portalRouter, sofemaCatchAll } from './portal_serve/sofema-proxy';
 
 // Create Express application
 const app = express();
@@ -23,8 +24,13 @@ const app = express();
 // MIDDLEWARE GLOBALES
 // ============================================
 
-// Security headers
-app.use(helmet());
+// Security headers — frameguard off so Softema portal can be iframed (CSP set by proxy)
+app.use(
+  helmet({
+    frameguard: false,
+    contentSecurityPolicy: false,
+  })
+);
 
 // CORS - Allow requests from frontend
 app.use(
@@ -36,11 +42,15 @@ app.use(
   })
 );
 
+const stashRawBody = (req: Request, _res: Response, buf: Buffer) => {
+  (req as Request & { rawBody?: Buffer }).rawBody = buf;
+};
+
 // Parse JSON bodies
-app.use(express.json());
+app.use(express.json({ verify: stashRawBody }));
 
 // Parse URL-encoded bodies
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, verify: stashRawBody }));
 
 // HTTP request logger (development only)
 if (process.env.NODE_ENV === 'development') {
@@ -84,6 +94,9 @@ app.use('/api/search', searchRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/favorites', favoritesRouter);
 
+// Softema portal proxy (auth bridge, /__api, then catch-all site proxy)
+app.use(portalRouter);
+app.use(sofemaCatchAll);
 
 // ============================================
 // 404 HANDLER
