@@ -71,13 +71,8 @@ function allowedFrameOrigins(): string[] {
 }
 
 function serveSiteEnabled(): boolean {
-  // Opt-in only — do not auto-serve a frontend on Render
+  // Opt-in only — do not auto-serve a local static frontend
   return process.env.SERVE_SITE === '1';
-}
-
-/** Softema HTML/app proxy (login, dashboard, assets). Off by default; set SOFEMA_SITE_PROXY=1 */
-function sofemaSiteProxyEnabled(): boolean {
-  return process.env.SOFEMA_SITE_PROXY === '1';
 }
 
 function rewriteLocation(value: string, isApi: boolean): string {
@@ -515,13 +510,7 @@ export function sofemaCatchAll(req: Request, res: Response, next: NextFunction):
 
   if (tryServeSite(req, res)) return;
 
-  // Only proxy Softema HTML/app when explicitly enabled (iframe embeds).
-  // /__api and auth bridge stay available via portalRouter regardless.
-  if (!sofemaSiteProxyEnabled()) {
-    next();
-    return;
-  }
-
+  // Proxy Softema app paths (/dashboard, /login, assets, etc.) for the portal iframe
   proxyRequest(req, res).catch(next);
 }
 
@@ -531,13 +520,10 @@ export function logSofemaProxyReady(): void {
   console.log(`  Public origin:  ${origin}`);
   console.log(`  Frame allow:    ${allowedFrameOrigins().join(', ')}`);
   console.log(`  Health:         ${origin}/healthz`);
+  console.log(`  Softema login:  ${origin}/login`);
+  console.log(`  Softema dash:   ${origin}/dashboard`);
   console.log(`  Softema API:    ${origin}${API_PREFIX}/api/...`);
   console.log(`  Auth bridge:    ${origin}/__auth_bridge`);
-  if (sofemaSiteProxyEnabled()) {
-    console.log(`  Softema site:   ON  (e.g. ${origin}/login)`);
-  } else {
-    console.log('  Softema site:   OFF (set SOFEMA_SITE_PROXY=1 to proxy /login, /dashboard, etc.)');
-  }
   if (serveSiteEnabled()) {
     console.log(`  Local static:   ${origin}/portal.html  (SERVE_SITE=1)`);
   }
