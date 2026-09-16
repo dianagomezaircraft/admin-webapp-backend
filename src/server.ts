@@ -1,10 +1,7 @@
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import app from './app';
 import testDatabaseConnection from './config/database';
 import { logSofemaProxyReady } from './portal_serve/sofema-proxy';
-
-// Cargar variables de entorno
-dotenv.config();
 
 // Puerto del servidor
 const PORT = process.env.PORT || 3001;

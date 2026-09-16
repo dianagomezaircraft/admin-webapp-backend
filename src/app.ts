@@ -15,6 +15,7 @@ import contactRoutes from './routes/contact.routes';
 import searchRoutes from './routes/search.routes';
 import templateRoutes from './routes/template.routes';
 import favoritesRouter from './routes/favorites.routes';
+import moodleRoutes from './routes/moodle.routes';
 import { portalRouter, sofemaCatchAll } from './portal_serve/sofema-proxy';
 
 // Create Express application
@@ -108,6 +109,7 @@ app.use('/api/contacts', contactRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/favorites', favoritesRouter);
+app.use('/api/moodle', moodleRoutes);
 
 // Softema portal proxy (auth bridge, /__api, then catch-all site proxy)
 app.use(portalRouter);
